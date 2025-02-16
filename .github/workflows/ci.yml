@@ -40,8 +40,7 @@ jobs:
     name: Create Release
     runs-on: ubuntu-latest # We'll use Ubuntu for the release creation process itself
     needs: build-and-test
-    # the presence of a tag is what we want to use to trigger teh release
-    if: startsWith(github.ref, 'refs/tags/') 
+    if: startsWith(github.ref, 'refs/tags/') # the presence of a tag is what we want to use to trigger a release
 
     strategy:
       matrix:

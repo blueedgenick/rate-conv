@@ -1,6 +1,4 @@
 
-# TODO this is just a skeleton!
-
 # Data Rate Converter
 
 This is a command-line application that converts data rates between various units.
@@ -21,6 +19,7 @@ It takes an input data rate (e.g., "100 kb/s"), an output data rate (e.g., "mb/h
     * "h"
     * "hr"
     * "hour"
+* Probably the most important thing to note when specifying inputs is that a lower-case 'b' 
 
 ## Usage
 

@@ -83,7 +83,7 @@ rateconv "1024 KiB/sec" mib/s
 ```
 
 ## Installation
-To build this application you will need to have the Rust toolchain installed.
+To build this application locally you will need to have the Rust toolchain installed.
 Install Rust https://www.rust-lang.org/tools/install
 Once you have Rust installed, you can clone this repository, and use cargo to build the application
 ```bash

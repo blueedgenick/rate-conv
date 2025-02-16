@@ -1,30 +1,27 @@
-name: Rust CI
+name: Rust CI/CD
 
-# Controls when the workflow will run
 on:
   push:
-    branches:
-      - main  # Trigger on pushes to the 'main' branch
+    branches: [ "main" ]
   pull_request:
-    branches:
-      - main  # Trigger on pull requests targeting 'main'
+    branches: [ "main" ]
+  workflow_dispatch:
 
-# A workflow run is made up of one or more jobs that can run sequentially or in parallel
 jobs:
   build-and-test:
-    name: Build and Test
-    runs-on: ubuntu-latest  # Use the latest Ubuntu runner
+    name: Build and Test (Ubuntu)
+    runs-on: ubuntu-latest  # Only need to run the CI portion on Ubuntu
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4 # Checkout your repository
+        uses: actions/checkout@v4
 
       - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable # Use the stable Rust toolchain
+        uses: dtolnay/rust-toolchain@stable # Use 'stable' here, not 'master'
         with:
-          components: clippy, rustfmt #Installs additional components
+          components: clippy, rustfmt
 
-      - name: rust-cache # Caches dependencies for faster build times
+      - name: rust-cache
         uses: Swatinem/rust-cache@v2
 
       - name: Check formatting
@@ -38,3 +35,74 @@ jobs:
 
       - name: Run tests
         run: cargo test --verbose
+
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest # We'll use Ubuntu for the release creation process itself
+    needs: build-and-test
+    # the presence of a tag is what we want to use to trigger teh release
+    if: startsWith(github.ref, 'refs/tags/') 
+
+    strategy:
+      matrix:
+        include:
+          - target: x86_64-unknown-linux-gnu
+            os_name: linux
+          - target: aarch64-apple-darwin
+            os_name: macos
+          - target: x86_64-pc-windows-msvc
+            os_name: windows
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }} # Install the target toolchain
+
+      - name: rust-cache
+        uses: Swatinem/rust-cache@v2
+
+      - name: Get tag name
+        id: get_tag
+        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Build release binary
+        run: cargo build --release --verbose --target ${{ matrix.target }}
+
+      - name: Rename binary
+        id: rename_binary
+        run: |
+          # Construct the new binary name (my-app-v1.0.0-linux-x86_64)
+          NEW_NAME="rateconv-v${{ steps.get_tag.outputs.TAG_NAME }}-${{ matrix.os_name }}-x86_64"
+          # Adjust executable extension based on target OS
+          if [[ "${{ matrix.os_name }}" == "windows" ]]; then
+            NEW_NAME="$NEW_NAME.exe"
+          fi
+          # Move and rename the binary
+          mv ./target/${{ matrix.target }}/release/my-app${{ (matrix.os_name == 'windows' && '.exe') || '' }} ./$NEW_NAME
+          echo "BINARY_NAME=$NEW_NAME" >> $GITHUB_OUTPUT
+
+      - name: Create Release (Single Release)
+        if: matrix.target == 'x86_64-unknown-linux-gnu'  # Only create the release once
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.get_tag.outputs.TAG_NAME }}
+          release_name: Release ${{ steps.get_tag.outputs.TAG_NAME }}
+          draft: false
+          prerelease: false
+        id: create_release
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./${{ steps.rename_binary.outputs.BINARY_NAME }}
+          asset_name: ${{ steps.rename_binary.outputs.BINARY_NAME }}
+          asset_content_type: application/octet-stream

@@ -5,25 +5,31 @@
 
 This is a command-line application that converts data rates between various units.
 
-It takes an input data rate (e.g., "100 kb/s"), an output size unit (e.g., "mb"), and an output time unit (e.g., "hr"), and prints the converted data rate to the console. It also provides a verbose mode for more descriptive output, and an option to specify the number of decimal places in the output.
+It takes an input data rate (e.g., "100 kb/s"), an output data rate (e.g., "mb/hr"), and prints the converted data rate to the console. It also provides a verbose mode for more descriptive output, and an option to specify the number of decimal places in the output.
 
 ## Features
 
-*   Converts data rates between various units (bits, bytes, kibibits, kilobytes, etc.)
-*   Supports time units (milliseconds, seconds, minutes, hours, days)
-*   Provides a verbose output option for more detailed descriptions.
-*   Allows you to specify the number of decimal places in the output.
+*   Converts data rates between various size and time units (bits, bytes, megabytes, per hour or minute, etc.)
+*   Provides a verbose output option for more detailed descriptions. (`-v`)
+*   Allows you to specify the number of decimal places in the output. (`-d2`)
+*   This app attempts to be as permissive as possible in how you specify the desired size and time units so that you don't have to memorize or guess a precise syntax. For instance, the following are all accpetable forms of specifying "kilobytes":
+    * "kB"
+    * "KB"
+    * "kBytes"
+    * "KBytes"
+* Similarly for time units:
+    * "h"
+    * "hr"
+    * "hour"
 
 ## Usage
 
 ```bash
-rateconv <INPUT_RATE> <OUTPUT_SIZE_UNIT> <OUTPUT_TIME_UNIT> [OPTIONS]
+rateconv <INPUT_RATE> <OUTPUT_RATE> [OPTIONS]
 ```
 - INPUT_RATE: The data rate to convert (e.g., "64 kb/s").
 
-- OUTPUT_SIZE_UNIT: The desired output size unit (e.g., "mb").
-
-- OUTPUT_TIME_UNIT: The desired output time unit (e.g., "hr").
+- OUTPUT_RATE: The desired output rate (e.g., "mb/hr").
 
 ### Supported Data Size Units
 The following data size units are supported:
@@ -36,51 +42,44 @@ The following data size units are supported:
 
 **Gigabits**: `gb`
 
+**Terabits**: `tb`
+
 **Bytes**: `B`
 
 **Kilobytes**: `kB`
 
 **Megabytes**: `MB`
 
-Gigabytes: GB
+**Gigabytes**: `GB`
 
-Kibibits: kib
+**Terabytes**: `TB`
 
-Mebibits: mib
-
-Gibibits: gib
-
-Kibibytes: KiB
-
-Mebibytes: MiB
-
-Gibibytes: GiB
 
 ### Supported Time Units
 The following time units are supported:
 
-Milliseconds: ms
+**Milliseconds**: `ms`
 
-Seconds: s
+**Seconds**: `s`
 
-Minutes: m
+**Minutes**: `m`
 
-Hours: hr
+**Hours**: `h`
 
-Days: d
+**Days**: `d`
 
 ## Options:
 
 - -v, --verbose: Enable verbose output with descriptions of the units being used.
 
-- -d <NUMBER>, --decimal-places <NUMBER>: The number of decimal places to use in the output.
+- -d <NUMBER>, --decimal-places <NUMBER>: The number of decimal places to use in the output, default 2.
 
 ## Examples
 ```bash
-rate-conv "100 kb/s" mb hr
-rate-conv -v "100 kb/s" mb hr
-rate-conv "100 kb/s" mb hr -d 4
-rate-conv "1024 KiB/s" mib s
+rateconv 100 kb/s mb/h
+rateconv -v 100 kb/s mbph
+rateconv 100kbps mb/hr -d 4
+rateconv "1024 KiB/sec" mib/s
 ```
 
 ## Installation

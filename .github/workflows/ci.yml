@@ -76,14 +76,14 @@ jobs:
       - name: Rename binary
         id: rename_binary
         run: |
-          # Construct the new binary name (my-app-v1.0.0-linux-x86_64)
+          # Construct the new binary name (e.g. rateconv-v1.0.0-linux-x86_64)
           NEW_NAME="rateconv-v${{ steps.get_tag.outputs.TAG_NAME }}-${{ matrix.os_name }}-x86_64"
           # Adjust executable extension based on target OS
           if [[ "${{ matrix.os_name }}" == "windows" ]]; then
             NEW_NAME="$NEW_NAME.exe"
           fi
           # Move and rename the binary
-          mv ./target/${{ matrix.target }}/release/my-app${{ (matrix.os_name == 'windows' && '.exe') || '' }} ./$NEW_NAME
+          mv ./target/${{ matrix.target }}/release/rateconv${{ (matrix.os_name == 'windows' && '.exe') || '' }} ./$NEW_NAME
           echo "BINARY_NAME=$NEW_NAME" >> $GITHUB_OUTPUT
 
       - name: Create Release (Single Release)

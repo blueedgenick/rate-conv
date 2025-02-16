@@ -77,7 +77,7 @@ jobs:
         id: rename_binary
         run: |
           # Construct the new binary name (e.g. rateconv-v1.0.0-linux-x86_64)
-          NEW_NAME="rateconv-v${{ steps.get_tag.outputs.TAG_NAME }}-${{ matrix.os_name }}-x86_64"
+          NEW_NAME="rateconv-${{ steps.get_tag.outputs.TAG_NAME }}-${{ matrix.os_name }}-x86_64"
           # Adjust executable extension based on target OS
           if [[ "${{ matrix.os_name }}" == "windows" ]]; then
             NEW_NAME="$NEW_NAME.exe"

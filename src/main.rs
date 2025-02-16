@@ -81,7 +81,7 @@ impl fmt::Display for TimeUnit {
 }
 
 impl TimeUnit {
-    fn to_bits_per_second(&self, value: f64) -> f64 {
+    fn convert_to_bits_per_second(&self, value: f64) -> f64 {
         match self {
             TimeUnit::Millisecond => value * 1000.0,
             TimeUnit::Second => value,
@@ -91,7 +91,7 @@ impl TimeUnit {
         }
     }
 
-    fn from_bits_per_second(&self, value: f64) -> f64 {
+    fn convert_from_bits_per_second(&self, value: f64) -> f64 {
         match self {
             TimeUnit::Millisecond => value / 1000.0,
             TimeUnit::Second => value,
@@ -154,7 +154,7 @@ impl fmt::Display for DataSizeUnit {
 }
 
 impl DataSizeUnit {
-    fn to_bits(&self, value: f64) -> f64 {
+    fn convert_to_bits(&self, value: f64) -> f64 {
         match self {
             DataSizeUnit::Bit => value,
             DataSizeUnit::KiloBit => value * 1_000.0,
@@ -169,7 +169,7 @@ impl DataSizeUnit {
         }
     }
 
-    fn from_bits(&self, value: f64) -> f64 {
+    fn convert_from_bits(&self, value: f64) -> f64 {
         match self {
             DataSizeUnit::Bit => value,
             DataSizeUnit::KiloBit => value / 1_000.0,
@@ -286,16 +286,18 @@ fn parse_input_rate(input: &str) -> IResult<&str, (f64, DataRate), ConverterErro
 }
 
 fn convert_data_rate(quantity: f64, rate: &DataRate, target_rate: &DataRate) -> Option<f64> {
-    let value_in_bits = rate.size_unit.to_bits(quantity);
+    let value_in_bits = rate.size_unit.convert_to_bits(quantity);
     dbg!(value_in_bits);
-    let value_in_bits_per_second = rate.time_unit.to_bits_per_second(value_in_bits);
+    let value_in_bits_per_second = rate.time_unit.convert_to_bits_per_second(value_in_bits);
     dbg!(value_in_bits_per_second);
 
-    let converted_value_in_bits = target_rate.size_unit.from_bits(value_in_bits_per_second);
+    let converted_value_in_bits = target_rate
+        .size_unit
+        .convert_from_bits(value_in_bits_per_second);
     dbg!(converted_value_in_bits);
     let converted_value = target_rate
         .time_unit
-        .from_bits_per_second(converted_value_in_bits);
+        .convert_from_bits_per_second(converted_value_in_bits);
     dbg!(converted_value);
 
     Some(converted_value)

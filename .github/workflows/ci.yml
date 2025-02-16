@@ -1,0 +1,40 @@
+name: Rust CI
+
+# Controls when the workflow will run
+on:
+  push:
+    branches:
+      - main  # Trigger on pushes to the 'main' branch
+  pull_request:
+    branches:
+      - main  # Trigger on pull requests targeting 'main'
+
+# A workflow run is made up of one or more jobs that can run sequentially or in parallel
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: ubuntu-latest  # Use the latest Ubuntu runner
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4 # Checkout your repository
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable # Use the stable Rust toolchain
+        with:
+          components: clippy, rustfmt #Installs additional components
+
+      - name: rust-cache # Caches dependencies for faster build times
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
+
+      - name: Run Clippy
+        run: cargo clippy -- -D warnings
+
+      - name: Build
+        run: cargo build --verbose
+
+      - name: Run tests
+        run: cargo test --verbose

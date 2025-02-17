@@ -38,10 +38,41 @@ jobs:
       - name: Run tests
         run: cargo test --verbose
 
-  release:
+  create-release-job:  # Create the release object
     name: Create Release
-    needs: build-and-test
-    if: startsWith(github.ref, 'refs/tags/') # the presence of a tag is what we want to use to trigger a release
+    runs-on: ubuntu-latest
+    needs: build-and-test  # Must happen AFTER build-and-test
+    if: github.ref_type == 'tag' # Only run on tag pushes
+
+    outputs:  # Define job-level outputs
+      release_upload_url: ${{ steps.create_release.outputs.upload_url }}
+      tag_name: ${{ steps.get_tag.outputs.TAG_NAME }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Get tag name
+        id: get_tag
+        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ steps.get_tag.outputs.TAG_NAME }}
+          release_name: Release ${{ steps.get_tag.outputs.TAG_NAME }}
+          draft: false
+          prerelease: false
+
+  build-and-upload-assets:  # Build and upload assets
+    name: Build and Upload Assets
+    runs-on: ${{ matrix.runs_on }}
+    needs: create-release-job  # Must happen AFTER create-release job
+    if: github.ref_type == 'tag' # Only run on tags
+    # if: startsWith(github.ref, 'refs/tags/') # the presence of a tag is what we want to use to # trigger a release
 
     strategy:
       matrix:
@@ -56,7 +87,7 @@ jobs:
             os_name: windows
             runs_on: windows-latest  # Windows builds on Windows
 
-    runs-on: ${{ matrix.runs_on }} # Use the runner defined in the matrix
+   # runs-on: ${{ matrix.runs_on }} # Use the runner defined in the matrix
 
     steps:
       - name: Checkout code
@@ -70,9 +101,9 @@ jobs:
       - name: rust-cache
         uses: Swatinem/rust-cache@v2
 
-      - name: Get tag name
-        id: get_tag
-        run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+      # - name: Get tag name
+      #   id: get_tag
+      #   run: echo "TAG_NAME=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
       - name: Build release binary
         run: cargo build --release --verbose --target ${{ matrix.target }}
@@ -81,7 +112,7 @@ jobs:
         id: rename_binary
         run: |
           # Construct the new binary name (e.g. rateconv-v1.0.0-linux-x86_64)
-          NEW_NAME="rateconv-${{ steps.get_tag.outputs.TAG_NAME }}-${{ matrix.os_name }}-x86_64"
+          NEW_NAME="rateconv-${{ needs.create-release-job.outputs.tag_name }}-${{ matrix.os_name }}-x86_64"
           # Adjust executable extension based on target OS
           if [[ "${{ matrix.os_name }}" == "windows" ]]; then
             NEW_NAME="$NEW_NAME.exe"
@@ -90,24 +121,24 @@ jobs:
           mv ./target/${{ matrix.target }}/release/rateconv${{ (matrix.os_name == 'windows' && '.exe') || '' }} ./$NEW_NAME
           echo "BINARY_NAME=$NEW_NAME" >> $GITHUB_OUTPUT
 
-      - name: Create Release (Single Release)
-        id: create_release
-        if: github.ref_type == 'tag' && matrix.target == 'x86_64-unknown-linux-gnu'  # Only create the release once
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: ${{ steps.get_tag.outputs.TAG_NAME }}
-          release_name: Release ${{ steps.get_tag.outputs.TAG_NAME }}
-          draft: false
-          prerelease: false
+      # - name: Create Release (Single Release)
+      #   id: create_release
+      #   if: github.ref_type == 'tag' && matrix.target == 'x86_64-unknown-linux-gnu'  # Only create the release once
+      #   uses: actions/create-release@v1
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      #   with:
+      #     tag_name: ${{ steps.get_tag.outputs.TAG_NAME }}
+      #     release_name: Release ${{ steps.get_tag.outputs.TAG_NAME }}
+      #     draft: false
+      #     prerelease: false
 
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ needs.create-release-job.outputs.release_upload_url }}
           asset_path: ./${{ steps.rename_binary.outputs.BINARY_NAME }}
           asset_name: ${{ steps.rename_binary.outputs.BINARY_NAME }}
           asset_content_type: application/octet-stream

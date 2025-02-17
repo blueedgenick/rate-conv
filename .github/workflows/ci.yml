@@ -110,6 +110,7 @@ jobs:
 
       - name: Rename binary
         id: rename_binary
+        shell: bash # Force Bash shell for consistency of condition evaluation
         run: |
           # Construct the new binary name (e.g. rateconv-v1.0.0-linux-x86_64)
           NEW_NAME="rateconv-${{ needs.create-release-job.outputs.tag_name }}-${{ matrix.os_name }}-x86_64"

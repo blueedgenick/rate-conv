@@ -19,7 +19,7 @@ It takes an input data rate (e.g., "100 kb/s"), an output data rate (e.g., "mb/h
     * "h"
     * "hr"
     * "hour"
-* Probably the most important thing to note when specifying inputs is that a lower-case 'b' 
+* Probably the most important thing to note when specifying inputs is that a lower-case 'b' always dentoes 'bits' whereas an upper-case 'B' always means 'bytes'.
 
 ## Usage
 

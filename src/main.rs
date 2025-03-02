@@ -34,6 +34,7 @@ use nom::{
     IResult,
 };
 use std::{
+    f64,
     num::{ParseFloatError, ParseIntError},
     process::ExitCode,
     str::FromStr,
@@ -114,6 +115,10 @@ enum DataSizeUnit {
     MegaByte,
     GigaByte,
     TeraByte,
+    KibiByte,
+    MebiByte,
+    GibiByte,
+    TebiByte,
 }
 
 impl FromStr for DataSizeUnit {
@@ -130,6 +135,10 @@ impl FromStr for DataSizeUnit {
             "mB" | "MB" | "mBytes" | "MBytes" => Ok(DataSizeUnit::MegaByte),
             "gB" | "GB" | "gBytes" | "GBytes" => Ok(DataSizeUnit::GigaByte),
             "tB" | "TB" | "tBytes" | "TBytes" => Ok(DataSizeUnit::TeraByte),
+            "kiB" | "KiB" | "kibiBytes" | "KibiBytes" => Ok(DataSizeUnit::KibiByte),
+            "miB" | "MiB" | "mebiBytes" | "MebiBytes" => Ok(DataSizeUnit::MebiByte),
+            "giB" | "GiB" | "gibiBytes" | "GibiBytes" => Ok(DataSizeUnit::GibiByte),
+            "tiB" | "TiB" | "tebiBytes" | "TebiBytes" => Ok(DataSizeUnit::TebiByte),
             _ => Err(ConverterError::DataSizeUnitParseError(s.to_string())),
         }
     }
@@ -148,6 +157,10 @@ impl fmt::Display for DataSizeUnit {
             DataSizeUnit::MegaByte => "megabyte",
             DataSizeUnit::GigaByte => "gigabyte",
             DataSizeUnit::TeraByte => "terabyte",
+            DataSizeUnit::KibiByte => "kibibyte",
+            DataSizeUnit::MebiByte => "mebibyte",
+            DataSizeUnit::GibiByte => "gibibyte",
+            DataSizeUnit::TebiByte => "tebibyte",
         };
         write!(f, "{}", base_unit)
     }
@@ -166,6 +179,10 @@ impl DataSizeUnit {
             DataSizeUnit::MegaByte => value * 8_000_000.0,
             DataSizeUnit::GigaByte => value * 8_000_000_000.0,
             DataSizeUnit::TeraByte => value * 8_000_000_000_000.0,
+            DataSizeUnit::KibiByte => value * (8 * 1024) as f64,
+            DataSizeUnit::MebiByte => value * (8 * 1024 * 1024) as f64,
+            DataSizeUnit::GibiByte => value * (8f64 * 1024f64 * 1024f64 * 1024f64),
+            DataSizeUnit::TebiByte => value * (8f64 * 1024f64 * 1024f64 * 1024f64 * 1024f64),
         }
     }
 
@@ -181,6 +198,10 @@ impl DataSizeUnit {
             DataSizeUnit::MegaByte => value / 8_000_000.0,
             DataSizeUnit::GigaByte => value / 8_000_000_000.0,
             DataSizeUnit::TeraByte => value / 8_000_000_000_000.0,
+            DataSizeUnit::KibiByte => value / (8 * 1024) as f64,
+            DataSizeUnit::MebiByte => value / (8 * 1024 * 1024) as f64,
+            DataSizeUnit::GibiByte => value / (8f64 * 1024f64 * 1024f64 * 1024f64),
+            DataSizeUnit::TebiByte => value / (8f64 * 1024f64 * 1024f64 * 1024f64 * 1024f64),
         }
     }
 }
@@ -409,10 +430,23 @@ mod tests {
     use DataSizeUnit::*;
     use TimeUnit::*;
 
+    /// Round an f64 value to a specific number of significant digits
+    fn precision_f64(x: f64, decimals: u32) -> f64 {
+        if x == 0. || decimals == 0 {
+            0.0
+        } else {
+            let shift = decimals as i32 - x.abs().log10().ceil() as i32;
+            let shift_factor = 10_f64.powi(shift);
+
+            (x * shift_factor).round() / shift_factor
+        }
+    }
+
     #[rstest]
     #[case::nnn_kb_s("123 kb/s", 123.0, DataRate::new(KiloBit, Second))]
     #[case::nnn_kbph("123 kbph", 123.0, DataRate::new(KiloBit, Hour))]
     #[case::nnnn_mb_hr("1024 MB/hr", 1024.0, DataRate::new(MegaByte, Hour))]
+    #[case::nnnn_mib_h("1024 MiB/h", 1024.0, DataRate::new(MebiByte, Hour))]
     #[case::nnnn_mb_hr_no_spaces("1024MB/hr", 1024.0, DataRate::new(MegaByte, Hour))]
     #[case::nnnn_mb_hr_leading_spaces("   1024 MB/hr", 1024.0, DataRate::new(MegaByte, Hour))]
     #[case::zero_b_ms("0 b/ms", 0.0, DataRate::new(Bit, Millisecond))]
@@ -450,6 +484,12 @@ mod tests {
         DataRate::new(GigaByte, Hour),
         DataRate::new(GigaByte, Second),
         1.0 / 3600.0)]
+    #[case::mib_min_to_gib_hr(
+        500.0,
+        DataRate::new(MebiByte, Minute),
+        DataRate::new(GibiByte, Hour),
+        500.0*60.0/1024.0
+    )]
     #[case::mbit_min_to_gbit_hr(
         500.0,
         DataRate::new(MegaBit, Minute),
@@ -475,7 +515,10 @@ mod tests {
         #[case] expected: f64,
     ) {
         let result = convert_data_rate(qty, &input_rate, &output_rate).unwrap();
-        assert_eq!(result, expected);
+        // some tests are only accurate to around 6 decimal places due to floating point inaccuracies with very large or small values so we'll round them off a bit before testing equality here
+        let rounded_result = precision_f64(result, 6);
+        let rounded_expect = precision_f64(expected, 6);
+        assert_eq!(rounded_result, rounded_expect);
     }
 
     #[test]

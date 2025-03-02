@@ -45,7 +45,7 @@ The following data size units are supported:
 
 **Bytes**: `B`
 
-**Kilobytes**: `kB`
+**Kilobytes**: `KB`
 
 **Megabytes**: `MB`
 
@@ -53,6 +53,13 @@ The following data size units are supported:
 
 **Terabytes**: `TB`
 
+**Kibibytes**: `KiB`
+
+**Mebibytes**: `MiB`
+
+**Gibibytes**: `GiB`
+
+**Tebibytes**: `TiB`
 
 ### Supported Time Units
 The following time units are supported:
